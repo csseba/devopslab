@@ -29,9 +29,10 @@ jobs:
         run: python -m unittest -v test
 
       - name: Unit Test Report
-        run: coverage run -m pytest test.py
-        run: coverage xml app.py
-        run: sonar-scanner
+        run: |
+          coverage run -m pytest test.py
+          coverage xml app.py
+          sonar-scanner
       
 
   sonarcloud:
