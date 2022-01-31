@@ -28,7 +28,7 @@ jobs:
       - name: Unit Test
         run: python -m unittest -v test
 
-      -name: Unit Test Report
+      - name: Unit Test Report
         run: coverage run -m pytest test.py
         run: coverage xml app.py
         run: sonar-scanner
