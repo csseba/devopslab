@@ -23,11 +23,15 @@ jobs:
         run:  pip install flask
 
       - name: Install Requirements
-        run:  pip install flask pytest flask-wtf
+        run:  pip install flask pytest flask-wtf coverage
               
       - name: Unit Test
         run: python -m unittest -v test
 
+      -name: Unit Test Report
+        run: coverage run -m pytest test.py
+        run: coverage xml app.py
+        run: sonar-scanner
       
 
   sonarcloud:
