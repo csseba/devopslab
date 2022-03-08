@@ -1,4 +1,3 @@
-# Nome do Workflow
 name: DevOpsLab Pipeline
 
 # Evento que irá acionar a pipeline
@@ -8,8 +7,9 @@ on:
       - main
 
 jobs:
-  Build:
+  UnitTest:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
@@ -17,48 +17,47 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.7.11'
+          python-version: '3.10'
 
       - name: Install Requirements
         run:  pip install flask
 
-      - name: Install Requirements
-        run:  pip install flask pytest flask-wtf coverage
-              
       - name: Unit Test
         run: python -m unittest -v test
 
-      - name: Unit Test Report
-        run: |
-          coverage run -m pytest test.py
-          coverage xml app.py
+  SonarCloud:
+      name: SonarCloud
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+          with:
+            fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+        - name: SonarCloud Scan
+          uses: SonarSource/sonarcloud-github-action@master
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      - name: Login to Heroku Container registry
-        env: 
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: heroku container:login
+  Build:
+      needs: [UnitTest,SonarCloud ]
+      name: Build
+      runs-on: ubuntu-latest
+      steps: 
+        - name: Checkout Repo
+          uses: actions/checkout@v2
 
-      - name: Build and Push
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: heroku container:push -a ${{ secrets.HEROKU_APP_NAME }} web
-      
+        - name: Login to Heroku Container registry
+          env: 
+            HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          run: heroku container:login
 
-  sonarcloud:
-    name: SonarCloud
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        - name: Docker Image & Push Heroku Registry
+          env:
+            HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          run: heroku container:push -a ${{ secrets.HEROKU_APP_NAME }} web
 
   Deploy:
-    needs: [Build,SonarCloud]
+    needs: Build
     runs-on: ubuntu-latest
 
     steps:
